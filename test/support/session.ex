@@ -3,9 +3,12 @@ defmodule Support.Session do
 
   use SMPPEX.Session
 
+  require SMPPEX.TransportSession
+
   @transport :ranch_tcp
 
-  def socket_messages, do: @transport.messages
+  @spec socket_messages :: {:tcp, :tcp_closed, :tcp_error, :tcp_passive | nil}
+  def socket_messages, do: SMPPEX.TransportSession.transport_messages(@transport)
 
   def init(socket, transport, st) do
     Process.flag(:trap_exit, true)

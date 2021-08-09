@@ -7,7 +7,6 @@ defmodule SMPPEX.TransportSession do
   require Logger
 
   alias :proc_lib, as: ProcLib
-  alias :ranch, as: Ranch
   alias :gen_server, as: GenServerErl
 
   alias SMPPEX.Protocol, as: SMPP
@@ -71,10 +70,48 @@ defmodule SMPPEX.TransportSession do
               | {:error, reason}
 
   # Ranch protocol behaviour
+  # Below is a dirty write up to support both ranch 1.x and ranch 2.x behaviours
+  {:ok, ranch_ver} = :application.get_key(:ranch, :vsn)
+  ranch_ver = to_string(ranch_ver)
 
-  def start_link(ref, transport, opts) do
-    start_link(:mc, {ref, transport, opts})
-  end
+  cond do
+    Version.match?(ranch_ver, "~> 2.0") ->
+      defp maybe_handshake(ref, nil) do
+        :ranch.handshake(ref)
+      end
+
+      @impl true
+      def start_link(ref, transport, opts) do
+        start_link(:mc, {ref, nil, transport, opts})
+      end
+
+      defmacro transport_messages(transport) do
+        quote do
+          unquote(transport).messages
+        end
+      end
+
+    Version.match?(ranch_ver, "~> 1.3") ->
+      defp maybe_handshake(ref, socket) do
+        :ranch.accept_ack(ref)
+        {:ok, socket}
+      end
+
+      @impl true
+      def start_link(ref, socket, transport, opts) do
+        start_link(:mc, {ref, socket, transport, opts})
+      end
+
+      defmacro transport_messages(transport) do
+        quote do
+          {ok, closed, error} = unquote(transport).messages
+          {ok, closed, error, nil}
+        end
+      end
+
+    true ->
+      raise "Unsupported ranch version"
+end
 
   def start_link(mode, args) do
     ProcLib.start_link(__MODULE__, :init, [{mode, args}])
@@ -109,9 +146,10 @@ defmodule SMPPEX.TransportSession do
     {:ok, pid}
   end
 
-  def init({:mc, {ref, transport, opts}}) do
+  @impl true
+  def init({:mc, {ref, socket, transport, opts}}) do
     :ok = ProcLib.init_ack({:ok, self()})
-    {:ok, socket} = Ranch.handshake(ref)
+    {:ok, socket} = maybe_handshake(ref, socket)
     {module, module_opts} = opts
 
     case module.init(socket, transport, module_opts) do
@@ -135,6 +173,7 @@ defmodule SMPPEX.TransportSession do
     end
   end
 
+  @impl true
   def init({:esme, {socket, ref, transport, opts}}) do
     {module, module_opts} = opts
 
@@ -178,7 +217,7 @@ defmodule SMPPEX.TransportSession do
   end
 
   defp wait_for_data(state) do
-    {_ok, closed, _error, _passive} = state.transport.messages
+    {_ok, closed, _error, _passive} = transport_messages(state.transport)
 
     case state.transport.setopts(state.socket, [{:active, :once}]) do
       :ok -> {:noreply, state}
@@ -187,8 +226,9 @@ defmodule SMPPEX.TransportSession do
     end
   end
 
+  @impl true
   def handle_info(message, state) do
-    {ok, closed, error, _passive} = state.transport.messages
+    {ok, closed, error, _passive} = transport_messages(state.transport)
 
     case message do
       {^ok, _socket, data} ->
@@ -241,10 +281,12 @@ defmodule SMPPEX.TransportSession do
     end
   end
 
+  @impl true
   def handle_call(request, from, state) do
     handle_call({:call, request}, from, state)
   end
 
+  @impl true
   def handle_cast({:cast, request}, state) do
     case state.module.handle_cast(request, state.module_state) do
       {:noreply, pdus, module_state} ->
@@ -255,6 +297,7 @@ defmodule SMPPEX.TransportSession do
     end
   end
 
+  @impl true
   def handle_cast(request, state) do
     handle_cast({:cast, request}, state)
   end
@@ -323,11 +366,13 @@ defmodule SMPPEX.TransportSession do
     {:stop, reason, state}
   end
 
+  @impl true
   def terminate(reason, state) do
     {pdus, new_module_state} = state.module.terminate(reason, state.module_state)
     send_pdus(new_module_state, state, pdus)
   end
 
+  @impl true
   def code_change(old_vsn, state, extra) do
     case state.module.code_change(old_vsn, state.module_state, extra) do
       {:ok, new_module_state} ->
