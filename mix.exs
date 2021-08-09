@@ -51,7 +51,6 @@ defmodule Smppex.Mixfile do
       {:ex_doc, ex_doc_version(), only: :dev},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:ranch, "~> 1.3"},
-      {:poison, "~> 3.0"}
     ]
   end
 
