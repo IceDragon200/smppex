@@ -50,6 +50,9 @@ defmodule SMPPEX.MC do
   `opts` is a keyword list of different options:
   * `:transport` is Ranch transport used for TCP connections: either `ranch_tcp` (the default) or `ranch_ssl`;
   * `:transport_opts` is a list of Ranch transport options. The major option is `{:port, port}`. The port is set to `0` by default, which means that the listener will accept connections on a random free port.
+  * `:protocol_opts` is a list of options that are passed to the TransportSession protocol implementation.
+    * `:use_proxy_protocol` - handles the proxy protocol header and discards for now
+    * `:proxy_timeout` - how long should it wait for the proxy header to be available (default: 5000 ms)
   * `:acceptor_count` is the number of Ranch listener acceptors, #{@default_acceptor_count} by default.
   * `:mc_opts` is a keyword list of MC options:
       - `:timer_resolution` is interval of internal `ticks` on which time related events happen, like checking timeouts for pdus, checking SMPP timers, etc. The default is #{
@@ -81,6 +84,7 @@ defmodule SMPPEX.MC do
     acceptor_count = Keyword.get(opts, :acceptor_count, @default_acceptor_count)
     transport = Keyword.get(opts, :transport, @default_transport)
     transport_opts = Keyword.get(opts, :transport_opts, [{:port, 0}])
+    protocol_opts = Keyword.get(opts, :protocol_opts, [])
     mc_opts = Keyword.get(opts, :mc_opts, [])
     ref = make_ref()
 
@@ -91,7 +95,7 @@ defmodule SMPPEX.MC do
         transport,
         transport_opts,
         SMPPEX.TransportSession,
-        {SMPPEX.Session, [mod_with_args, mc_opts], :mc}
+        {SMPPEX.Session, [mod_with_args, mc_opts], :mc, protocol_opts}
       )
 
     case start_result do

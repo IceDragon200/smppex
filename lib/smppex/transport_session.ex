@@ -113,7 +113,12 @@ defmodule SMPPEX.TransportSession do
   end
 
   def init(ref, socket, transport, opts) do
-    {module, module_opts, mode} = opts
+    {module, module_opts, mode, options} = opts
+
+    if options[:use_proxy_protocol] do
+      {:ok, _headers} =
+        transport.recv_proxy_header(socket, Keyword.get(options, :proxy_timeout, 5000))
+    end
 
     case module.init(socket, transport, module_opts) do
       {:ok, module_state} ->
