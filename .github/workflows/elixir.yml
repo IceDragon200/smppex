@@ -15,67 +15,9 @@ jobs:
     strategy:
       matrix:
         include:
-
-          # Elixir 1.9
-
-          - elixir: 1.9.0
-            otp_release: 21.3.8.24
-
-          - elixir: 1.9.0
-            otp_release: 22.3.4.23
-
-          # Elixir 1.10
-
-          - elixir: 1.10.0
-            otp_release: 21.3.8.24
-
-          - elixir: 1.10.0
-            otp_release: 22.3.4.23
-
-          - elixir: 1.10.3
-            otp_release: 23.3.4.9
-
-          # Elixir 1.11
-
-          - elixir: 1.11.4
-            otp_release: 21.3.8.24
-
-          - elixir: 1.11.4
-            otp_release: 22.3.4.23
-
-          - elixir: 1.11.4
-            otp_release: 23.3.4.9
-
-          - elixir: 1.11.4
-            otp_release: 24.1.6
-
-          # Elixir 1.12
-
-          - elixir: 1.12.3
-            otp_release: 22.3.4.23
-
-          - elixir: 1.12.3
-            otp_release: 23.3.4.9
-
-          - elixir: 1.12.3
-            otp_release: 24.1.6
-
-          # Elixir 1.13
-
-          - elixir: 1.13.4
-            otp_release: 22.3.4.23
-
-          - elixir: 1.13.4
-            otp_release: 23.3.4.9
-
-          - elixir: 1.13.4
-            otp_release: 24.2.1
-
-          - elixir: 1.13.4
-            otp_release: 25.1.1
-
+          #
           # Elixir 1.14
-
+          #
           - elixir: 1.14.0
             otp_release: 23.3.4.9
 
@@ -84,6 +26,27 @@ jobs:
 
           - elixir: 1.14.0
             otp_release: 25.1.1
+
+          #
+          # Elixir 1.15
+          #
+          - elixir: 1.15.8
+            otp_release: 25.3.2.15
+
+          #
+          # Elixir 1.16
+          #
+          - elixir: 1.16.3
+            otp_release: 25.3.2.15
+
+          - elixir: 1.16.3
+            otp_release: 26.2.5.4
+
+          #
+          # Elixir 1.17
+          #
+          - elixir: 1.17.3
+            otp_release: 27.1.2
 
     steps:
     - uses: actions/checkout@v2
