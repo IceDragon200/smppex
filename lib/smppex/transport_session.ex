@@ -119,12 +119,15 @@ end
 
   # Manual start, without Ranch
 
-  def start_esme(socket, transport, opts) do
+  def start_esme(socket, transport, {_, _, _} = opts) do
     ref = make_ref()
 
-    case start_link(:esme, {socket, ref, transport, opts}) do
-      {:ok, pid} -> grant_socket(pid, ref, transport, socket)
-      {:error, _err} = err -> err
+    case start_link(:esme, {ref, socket, transport, opts}) do
+      {:ok, pid} ->
+        grant_socket(pid, ref, transport, socket)
+
+      {:error, _err} = err ->
+        err
     end
   end
 
@@ -174,8 +177,13 @@ end
   end
 
   @impl true
-  def init({:esme, {socket, ref, transport, opts}}) do
-    {module, module_opts} = opts
+  def init({:esme, {ref, socket, transport, opts}}) do
+    {module, module_opts, options} = opts
+
+    if options[:use_proxy_protocol] do
+      {:ok, _headers} =
+        transport.recv_proxy_header(socket, Keyword.get(options, :proxy_timeout, 5000))
+    end
 
     case module.init(socket, transport, module_opts) do
       {:ok, module_state} ->
