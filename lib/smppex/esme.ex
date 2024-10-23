@@ -114,6 +114,10 @@ defmodule SMPPEX.ESME do
     end
   end
 
+  defdelegate call(pid, request, timeout \\ 5000), to: SMPPEX.Session
+  defdelegate cast(pid, request), to: SMPPEX.Session
+  defdelegate stop(pid, reason \\ :normal, timeout \\ :infinity), to: SMPPEX.Session
+
   defp convert_host(host) when is_binary(host), do: to_charlist(host)
   defp convert_host(host), do: host
 end

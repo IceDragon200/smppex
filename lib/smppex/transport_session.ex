@@ -111,9 +111,9 @@ defmodule SMPPEX.TransportSession do
 
     true ->
       raise "Unsupported ranch version"
-end
+  end
 
-  def start_link(mode, args) do
+  def start_link(mode, {_ref, _socket, _transport, _opts} = args) when mode in [:mc, :esme] do
     ProcLib.start_link(__MODULE__, :init, [{mode, args}])
   end
 
@@ -151,9 +151,14 @@ end
 
   @impl true
   def init({:mc, {ref, socket, transport, opts}}) do
+    {module, module_opts, options} = opts
+
     :ok = ProcLib.init_ack({:ok, self()})
+    if options[:use_proxy_protocol] do
+      {:ok, _headers} =
+        transport.recv_proxy_header(socket, Keyword.get(options, :proxy_timeout, 5000))
+    end
     {:ok, socket} = maybe_handshake(ref, socket)
-    {module, module_opts} = opts
 
     case module.init(socket, transport, module_opts) do
       {:ok, module_state} ->
@@ -255,12 +260,12 @@ end
 
   defp handle_socket_closed(state) do
     {reason, new_module_state} = state.module.handle_socket_closed(state.module_state)
-    stop(%TransportSession{state | module_state: new_module_state}, reason)
+    do_stop(%TransportSession{state | module_state: new_module_state}, reason)
   end
 
   defp handle_socket_error(state, error) do
     {reason, new_module_state} = state.module.handle_socket_error(error, state.module_state)
-    stop(%TransportSession{state | module_state: new_module_state}, reason)
+    do_stop(%TransportSession{state | module_state: new_module_state}, reason)
   end
 
   defp do_handle_info(message, state) do
@@ -356,7 +361,7 @@ end
   end
 
   defp handle_parse_error(state, error) do
-    stop(state, {:parse_error, error})
+    do_stop(state, {:parse_error, error})
   end
 
   defp handle_parse_result(state, parse_result, rest_data) do
@@ -365,11 +370,11 @@ end
         parse_pdus(send_pdus(module_state, state, pdus), rest_data)
 
       {:stop, reason, pdus, module_state} ->
-        stop(send_pdus(module_state, state, pdus), reason)
+        do_stop(send_pdus(module_state, state, pdus), reason)
     end
   end
 
-  defp stop(state, reason) do
+  defp do_stop(state, reason) do
     _ = state.transport.close(state.socket)
     {:stop, reason, state}
   end

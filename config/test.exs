@@ -1,3 +1,3 @@
 import Config
 
-config :logger, backends: []
+# config :logger, backends: []

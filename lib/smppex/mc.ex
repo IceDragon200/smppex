@@ -153,7 +153,7 @@ defmodule SMPPEX.MC do
       transport,
       transport_opts,
       SMPPEX.TransportSession,
-      {session_module, [mod_with_args, mc_opts]}
+      {session_module, [mod_with_args, mc_opts], protocol_opts}
     }
   end
 

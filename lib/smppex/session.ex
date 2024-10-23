@@ -322,8 +322,8 @@ defmodule SMPPEX.Session do
   @doc """
   Stops the session syncronously.
   """
-  def stop(pid, reason \\ :normal) do
-    TransportSession.call(pid, {:stop, reason})
+  def stop(pid, reason \\ :normal, timeout \\ :infinity) do
+    TransportSession.call(pid, {:stop, reason}, timeout)
   end
 
   @spec call(session, request :: term, timeout) :: term
